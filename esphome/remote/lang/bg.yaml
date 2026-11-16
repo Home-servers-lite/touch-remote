@@ -1,0 +1,46 @@
+# Bulgarian on-screen texts. Include ONE language file in the main config.
+
+substitutions:
+  txt_no_wifi: "Няма Wi-Fi"
+  txt_no_ha: "Няма HA"
+  txt_tv_unavailable: "TV недостъпен"
+  # Page titles
+  txt_title_lights: "Осветление"
+  txt_title_led: "LED"
+  txt_title_tv: "TV"
+  txt_title_appliances: "Уреди"
+  txt_title_power: "Мощност"
+  txt_title_settings: "Настройки"
+
+  # Lights page
+  txt_light_on: "Вкл."
+  txt_light_off: "Изкл."
+  txt_all_on: "Вкл. всички"
+  txt_all_off: "Изкл. всички"
+
+  # LED page
+  txt_led_on: ": вкл."
+  txt_led_off: ": изкл."
+  txt_colour: "Цвят"
+  txt_brightness: "Яркост"
+
+  # TV page
+  txt_tv_home: "Начало"
+  txt_tv_volume_up: "Звук +"
+  txt_tv_volume_down: "Звук -"
+  txt_tv_back: "Назад"
+  txt_tv_on: " вкл."
+  txt_tv_off: " изкл."
+
+  # Appliances page
+  txt_idle: "Готово"
+
+  # Power page
+  txt_power_subtitle: "текуща, за целия дом"
+  txt_power_waiting: "Изчакване на HA"
+  txt_power_of: "от"
+
+  # Settings page
+  txt_screen_brightness: "Яркост на екрана"
+  txt_stay_awake: "Без заспиване"
+  txt_stay_awake_note: "Спира заспиването за OTA обновяване. Изключва се при рестарт."

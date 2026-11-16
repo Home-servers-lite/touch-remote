@@ -1,0 +1,338 @@
+# =====================================================================
+# TV PAGE - remote for Google TV (Home Assistant "Android TV Remote" integration)
+# Power, arrows, OK, volume, play/pause, Back, Home.
+#
+# Required variables:
+#   remote    Android TV Remote entity           (e.g. remote.google_tv)
+# Optional:
+#   name      name shown on the power button    (default: Google TV)
+#   title     page title                        (default: from the language file)
+#   nav_icon  icon in the bottom bar (MDI)      (default: television)
+# =====================================================================
+
+defaults:
+  name: Google TV
+  title: ${txt_title_tv}
+  nav_icon: "\U000F0502"
+
+text_sensor:
+  - platform: homeassistant
+    id: ts_tv
+    entity_id: ${remote}
+    internal: true
+    on_value:
+      - script.execute: refresh_tv
+
+api:
+  on_client_disconnected:
+    - lambda: |-
+        if (client_info.rfind("Home Assistant", 0) == 0) id(ts_tv).publish_state("");
+
+font:
+  - file:
+      type: web
+      url: https://github.com/Templarian/MaterialDesign-Webfont/raw/v7.4.47/fonts/materialdesignicons-webfont.ttf
+    id: mdi_nav_tv
+    size: 22
+    bpp: 4
+    glyphs: ["${nav_icon}"]
+
+script:
+  - id: send_tv_command
+    parameters:
+      command: string
+    then:
+      - if:
+          condition:
+            lambda: |-
+              return remote_status::tv_available(
+                  wifi::global_wifi_component->is_connected() && id(ha_connected), id(ts_tv).state);
+          then:
+            - homeassistant.action:
+                action: remote.send_command
+                data:
+                  entity_id: ${remote}
+                  command: !lambda 'return command;'
+  - id: !extend build_ui
+    then:
+      - lambda: |-
+          lv_obj_set_parent(id(nav_tv), id(nav_bar));
+          lv_obj_set_flex_grow(id(nav_tv), 1);
+  - id: !extend refresh_all
+    then:
+      - script.execute: refresh_tv
+  - id: !extend refresh_connection
+    then:
+      - script.execute: refresh_tv
+  - id: refresh_tv
+    then:
+      - lvgl.widget.update:
+          id: [btn_tv_power, k_up, k_down, k_left, k_right, k_ok, k_volup, k_voldn, k_playpause, k_back, k_home]
+          state:
+            disabled: !lambda |-
+              return !remote_status::tv_available(
+                  wifi::global_wifi_component->is_connected() && id(ha_connected), id(ts_tv).state);
+      - lvgl.widget.update:
+          id: btn_tv_power
+          state:
+            checked: !lambda 'return id(ts_tv).state == "on";'
+      - lvgl.label.update:
+          id: lbl_tv_power
+          text: !lambda |-
+            if (!remote_status::tv_available(
+                wifi::global_wifi_component->is_connected() && id(ha_connected), id(ts_tv).state))
+              return std::string("${txt_tv_unavailable}");
+            return std::string(id(ts_tv).state == "on" ? "${name}${txt_tv_on}" : "${name}${txt_tv_off}");
+  - id: !extend nav_refresh
+    then:
+      - lvgl.widget.update:
+          id: nav_tv
+          state:
+            checked: !lambda 'return id(active_page) == "tv";'
+
+lvgl:
+  top_layer:
+    widgets:
+      - button:
+          id: nav_tv
+          height: 46
+          styles: st_nav
+          pressed:
+            bg_color: 0x0E1116
+          checkable: true
+          checked:
+            bg_color: 0x0E1116
+            text_color: 0xE9B04A
+            border_color: 0xE9B04A
+            border_width: 2
+            border_side: TOP
+          on_click:
+            - lvgl.page.show: page_tv
+          widgets:
+            - label:
+                text: "${nav_icon}"
+                text_font: mdi_nav_tv
+                align: CENTER
+
+  pages:
+    - id: page_tv
+      bg_color: 0x0E1116
+      on_load:
+        - lambda: 'id(active_page) = "tv";'
+        - script.execute: nav_refresh
+        - script.execute: refresh_tv
+      widgets:
+        - label:
+            text: "${title}"
+            text_font: mont_b20
+            x: 10
+            y: 6
+        - button:
+            id: btn_tv_power
+            x: 8
+            y: 36
+            width: 224
+            height: 38
+            styles: st_btn
+            pressed:
+              bg_color: 0x252E3A
+            checked:
+              bg_color: 0x16302A
+              border_color: 0x43B88C
+            on_click:
+              - if:
+                  condition:
+                    lambda: |-
+                      return remote_status::tv_available(
+                          wifi::global_wifi_component->is_connected() && id(ha_connected), id(ts_tv).state);
+                  then:
+                    - homeassistant.action:
+                        action: remote.toggle
+                        data:
+                          entity_id: ${remote}
+            widgets:
+              - label:
+                  id: lbl_tv_power
+                  text: "${txt_tv_unavailable}"
+                  align: CENTER
+        - button:
+            id: k_up
+            x: 58
+            y: 82
+            width: 46
+            height: 46
+            styles: st_btn
+            pressed:
+              bg_color: 0x252E3A
+            on_press: &send_k_up
+              - script.execute:
+                  id: send_tv_command
+                  command: DPAD_UP
+            on_long_press_repeat: *send_k_up
+            widgets:
+              - label:
+                  text: "\uF077"
+                  text_font: montserrat_14
+                  align: CENTER
+        - button:
+            id: k_left
+            x: 8
+            y: 132
+            width: 46
+            height: 46
+            styles: st_btn
+            pressed:
+              bg_color: 0x252E3A
+            on_press: &send_k_left
+              - script.execute:
+                  id: send_tv_command
+                  command: DPAD_LEFT
+            on_long_press_repeat: *send_k_left
+            widgets:
+              - label:
+                  text: "\uF053"
+                  text_font: montserrat_14
+                  align: CENTER
+        - button:
+            id: k_ok
+            x: 58
+            y: 132
+            width: 46
+            height: 46
+            styles: st_btn
+            pressed:
+              bg_color: 0x252E3A
+            on_click:
+              - script.execute:
+                  id: send_tv_command
+                  command: DPAD_CENTER
+            widgets:
+              - label:
+                  text: "OK"
+                  align: CENTER
+        - button:
+            id: k_right
+            x: 108
+            y: 132
+            width: 46
+            height: 46
+            styles: st_btn
+            pressed:
+              bg_color: 0x252E3A
+            on_press: &send_k_right
+              - script.execute:
+                  id: send_tv_command
+                  command: DPAD_RIGHT
+            on_long_press_repeat: *send_k_right
+            widgets:
+              - label:
+                  text: "\uF054"
+                  text_font: montserrat_14
+                  align: CENTER
+        - button:
+            id: k_down
+            x: 58
+            y: 182
+            width: 46
+            height: 46
+            styles: st_btn
+            pressed:
+              bg_color: 0x252E3A
+            on_press: &send_k_down
+              - script.execute:
+                  id: send_tv_command
+                  command: DPAD_DOWN
+            on_long_press_repeat: *send_k_down
+            widgets:
+              - label:
+                  text: "\uF078"
+                  text_font: montserrat_14
+                  align: CENTER
+        - button:
+            id: k_volup
+            x: 164
+            y: 82
+            width: 68
+            height: 46
+            styles: st_btn
+            pressed:
+              bg_color: 0x252E3A
+            on_press: &send_k_volup
+              - script.execute:
+                  id: send_tv_command
+                  command: VOLUME_UP
+            on_long_press_repeat: *send_k_volup
+            widgets:
+              - label:
+                  text: "${txt_tv_volume_up}"
+                  align: CENTER
+        - button:
+            id: k_voldn
+            x: 164
+            y: 132
+            width: 68
+            height: 46
+            styles: st_btn
+            pressed:
+              bg_color: 0x252E3A
+            on_press: &send_k_voldn
+              - script.execute:
+                  id: send_tv_command
+                  command: VOLUME_DOWN
+            on_long_press_repeat: *send_k_voldn
+            widgets:
+              - label:
+                  text: "${txt_tv_volume_down}"
+                  align: CENTER
+        - button:
+            id: k_playpause
+            x: 164
+            y: 182
+            width: 68
+            height: 46
+            styles: st_btn
+            pressed:
+              bg_color: 0x252E3A
+            on_click:
+              - script.execute:
+                  id: send_tv_command
+                  command: MEDIA_PLAY_PAUSE
+            widgets:
+              - label:
+                  text: "\uF04B\uF04C"
+                  text_font: montserrat_14
+                  align: CENTER
+        - button:
+            id: k_back
+            x: 8
+            y: 236
+            width: 108
+            height: 34
+            styles: st_btn
+            pressed:
+              bg_color: 0x252E3A
+            on_click:
+              - script.execute:
+                  id: send_tv_command
+                  command: BACK
+            widgets:
+              - label:
+                  text: "${txt_tv_back}"
+                  align: CENTER
+        - button:
+            id: k_home
+            x: 124
+            y: 236
+            width: 108
+            height: 34
+            styles: st_btn
+            pressed:
+              bg_color: 0x252E3A
+            on_click:
+              - script.execute:
+                  id: send_tv_command
+                  command: HOME
+            widgets:
+              - label:
+                  text: "${txt_tv_home}"
+                  align: CENTER
